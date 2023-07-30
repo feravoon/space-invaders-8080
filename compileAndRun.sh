@@ -1,0 +1,2 @@
+clang++ -Ofast -std=c++11 -o Program Program.cpp CPU8080.cpp Memory.cpp IOcontroller.cpp Shifter.cpp Inputs.cpp Renderer.cpp -L/opt/homebrew/lib -lSDL2 -I/opt/homebrew/include -D_THREAD_SAFE -ggdb3 -Wall -lSDL2_image -lSDL2_mixer -lm 
+./Program

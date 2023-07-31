@@ -42,15 +42,17 @@ uint8_t bitReverse(uint8_t toReverse)
 	return bitReverseTable[toReverse];
 }
 
-Renderer::Renderer()
+Renderer::Renderer(float scale)
 {
+	this->scale = scale;
+	
     // returns zero on success else non-zero
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         printf("error initializing SDL: %s\n", SDL_GetError());
     }
 
     // creates a window
-    this->win = SDL_CreateWindow("Space Invaders | Press C for Coin, 1 for Starting a Game, F for Fire", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 224*4, 256*4, SDL_WINDOW_ALLOW_HIGHDPI);
+    this->win = SDL_CreateWindow("Space Invaders | Press C for Coin, 1 for Starting a Game, F for Fire", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 224*this->scale, 256*this->scale, SDL_WINDOW_ALLOW_HIGHDPI);
  
     // triggers the program that controls your graphics hardware and sets flags
     Uint32 render_flags = SDL_RENDERER_ACCELERATED;
@@ -59,6 +61,14 @@ Renderer::Renderer()
     this->rend = SDL_CreateRenderer(win, -1, render_flags);
 
     SDL_ShowCursor(SDL_DISABLE);
+}
+
+void set_pixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
+{
+  Uint32 * const target_pixel = (Uint32 *) ((Uint8 *) surface->pixels
+                                             + y * surface->pitch
+                                             + x * surface->format->BytesPerPixel);
+  *target_pixel = pixel;
 }
 
 void Renderer::render(Memory cpuMem)
@@ -71,8 +81,15 @@ void Renderer::render(Memory cpuMem)
     for (int i = 0; i < length; i++)
 	   imByteArray[i] = ~bitReverse(imByteArray[i]);
 
-    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(this->imByteArray,256,224,1,256/8,SDL_PIXELFORMAT_INDEX1MSB);
+    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(this->imByteArray,256,224,32,256/8,SDL_PIXELFORMAT_INDEX1MSB);
     
+	//for(int i=0;i<256*224;i++)
+	//{
+	//	if(i>200*224)
+			//set_pixel(surface,i/256,i%256,0xf);
+	//}
+
+
     this->tex = SDL_CreateTextureFromSurface(rend, surface);
     SDL_FreeSurface(surface);
 
@@ -85,10 +102,10 @@ void Renderer::render(Memory cpuMem)
     SDL_RenderClear(rend);
 
     // Texture coordinates
-    dest.w = 256*8;
-    dest.h = 224*8;
-    dest.x = -128;
-    dest.y = 128;
+    dest.w = 256*2*this->scale;
+    dest.h = 224*2*this->scale;
+    dest.x = -32*this->scale;
+    dest.y = 32*this->scale;
     
     SDL_RenderCopyEx(rend,tex,NULL,&dest,270,NULL,SDL_FLIP_NONE);
     SDL_DestroyTexture(this->tex);

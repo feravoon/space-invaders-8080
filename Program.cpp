@@ -15,22 +15,21 @@ std::atomic<bool> paintNow{false};
 void emulateMachine()
 {
 	auto now = high_resolution_clock::now();
-	auto workDuration = high_resolution_clock::now() - now;
+	auto nextInterrupt = now;
 	int intID = 0;
 	int cycles = 0;
 
 	while (true)
 	{
-		now = high_resolution_clock::now();
 		cycles = 0;
-
 		while (16667 > cycles)
 		{
 			cycles += cpu.processInstruction();
 			shifter.Process(cpu.IO);
 		}
 
-		if (cpu.IE)
+		now = high_resolution_clock::now();
+		if (cpu.IE & now>=nextInterrupt)
 		{
 			if (intID == 1)
 			{
@@ -43,15 +42,15 @@ void emulateMachine()
 				cpu.generateInterrupt(2);
 				intID = 1;
 			}
-			
+			// two interrupts for a frame time (1/60 seconds)
+			nextInterrupt = now + nanoseconds((int)(1000000000.0f/120.0f)); 
 		}
-		workDuration = high_resolution_clock::now() - now;
-		std::this_thread::sleep_for(milliseconds((int)round(1000.0f / 120.0f)) - workDuration);
 	}
 }
 
-int main() {
-	Renderer renderer;
+int main()
+{
+	Renderer renderer(2.5f);
    	cpu = CPU8080(); // Initialize the CPU
 	cpu.printOutput = false; // for printing debug output to console
 	bool close = false;
@@ -65,14 +64,30 @@ int main() {
 	std::thread thr(emulateMachine);
 
 	while(!close)
-	{		
+	{	
 		if(paintNow)
 		{
 			paintNow = false;
-			close = inputs.Refresh(cpu.IO);
+			close = inputs.Refresh(cpu.IO);	
 			renderer.render(cpu.memory);
 		}
 	}
+	
+	// destroy texture
+    SDL_DestroyTexture(renderer.tex);
+ 
+    // destroy renderer
+    SDL_DestroyRenderer(renderer.rend);
+ 
+    // destroy window
+    SDL_DestroyWindow(renderer.win);
+
+	// close SDL
+    SDL_Quit();
+
+	// kill emulation thread
+	thr.~thread();
+
 	return 0;
 }
 

@@ -11,6 +11,7 @@ class Renderer
         uint8_t imByteArray[224 * 256 / 8];
         SDL_Texture* tex;
         SDL_Rect dest;
-        Renderer();
+        float scale;
+        Renderer(float scale);
         void render(Memory cpuMem);
 };

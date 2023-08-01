@@ -48,6 +48,7 @@ bool CPU8080::parity(int x, int size)
 
 void CPU8080::updateFlagsArithmetic(int res)
 {
+	AC = false;
 	CY = (res > 0xff);
 	Z = ((res & 0xff) == 0);
 	S = (0x80 == (res & 0x80));
@@ -255,9 +256,9 @@ int CPU8080::processInstruction() // Main method for processing an instruction (
 	case 0x39: { int res = getHL() + SP; setHL(res); CY = (res & 0xffff0000) != 0; }; break; // DAD SP
 
 	case 0x27: // DAA
-		if ((A & 0xf) > 9)
+		if (((A & 0xf) > 9) | AC)
 			A += 6;
-		if ((A & 0xf0) > 0x90)
+		if (((A & 0xf0) > 0x90) | CY)
 		{
 			int res = A + 0x60;
 			A = (res & 0xff);
@@ -378,7 +379,8 @@ int CPU8080::processInstruction() // Main method for processing an instruction (
 	case 0x7f: break; // MOV A,A
 
 	// ADD
-	case 0x80: { int res = A + B; updateFlagsArithmetic(res); A = (res & 0xff); } break; // ADD B
+	// AC (Auxiliary Carry flag) was not implemented at first. But, I added it, only at the row below, to make the coin count logic work.
+	case 0x80: { int res = A + B; updateFlagsArithmetic(res); AC = ((A & 0x0f)+(B & 0x0f) > 0x0f); A = (res & 0xff); } break; // ADD B
 	case 0x81: { int res = A + C; updateFlagsArithmetic(res); A = (res & 0xff); } break; // ADD C
 	case 0x82: { int res = A + D; updateFlagsArithmetic(res); A = (res & 0xff); } break; // ADD D
 	case 0x83: { int res = A + E; updateFlagsArithmetic(res); A = (res & 0xff); } break; // ADD E

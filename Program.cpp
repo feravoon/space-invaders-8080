@@ -50,7 +50,7 @@ void emulateMachine()
 
 int main()
 {
-	Renderer renderer(2.5f);
+	Renderer renderer(3.0f);
    	cpu = CPU8080(); // Initialize the CPU
 	cpu.printOutput = false; // for printing debug output to console
 	bool close = false;

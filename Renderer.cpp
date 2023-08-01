@@ -60,15 +60,26 @@ Renderer::Renderer(float scale)
     // creates a renderer to render our images
     this->rend = SDL_CreateRenderer(win, -1, render_flags);
 
+	SDL_Surface* surfBG = IMG_Load("bg.png");
+	SDL_SetSurfaceBlendMode(surfBG,SDL_BLENDMODE_BLEND);
+	this->texBG = SDL_CreateTextureFromSurface(this->rend, surfBG);
+	SDL_SetTextureBlendMode(this->texBG,SDL_BLENDMODE_BLEND);
+	SDL_FreeSurface(surfBG);
+
     SDL_ShowCursor(SDL_DISABLE);
 }
 
-void set_pixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
+void pixel_and(SDL_Surface *surface, int x, int y, Uint32 pixel)
 {
-  Uint32 * const target_pixel = (Uint32 *) ((Uint8 *) surface->pixels
-                                             + y * surface->pitch
-                                             + x * surface->format->BytesPerPixel);
-  *target_pixel = pixel;
+	Uint32 * const target_pixel = (Uint32 *) ((Uint8 *)surface->pixels + y*surface->pitch + x*surface->format->BytesPerPixel);
+	*target_pixel &= pixel;	
+}
+
+void black_to_transparent(SDL_Surface *surface, int x, int y)
+{
+	Uint32 * const target_pixel = (Uint32 *) ((Uint8 *)surface->pixels + y*surface->pitch + x*surface->format->BytesPerPixel);
+	if (*target_pixel == 0xff000000)
+		*target_pixel = 0x00000000;	
 }
 
 void Renderer::render(Memory cpuMem)
@@ -81,15 +92,31 @@ void Renderer::render(Memory cpuMem)
     for (int i = 0; i < length; i++)
 	   imByteArray[i] = ~bitReverse(imByteArray[i]);
 
-    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(this->imByteArray,256,224,32,256/8,SDL_PIXELFORMAT_INDEX1MSB);
-    
-	//for(int i=0;i<256*224;i++)
-	//{
-	//	if(i>200*224)
-			//set_pixel(surface,i/256,i%256,0xf);
-	//}
+    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(this->imByteArray,256,224,1,256/8,SDL_PIXELFORMAT_INDEX1MSB);
+    SDL_SetSurfaceBlendMode(surface,SDL_BLENDMODE_BLEND);
 
+	// Convert surface pixel format to RGBA32
+	surface = SDL_ConvertSurfaceFormat(surface,SDL_PIXELFORMAT_RGBA32,0);
+	
+	// Color the pixels according to the classic arcade monitor overlays
+	for(int i=0; i<256; i++)
+	{
+		for(int j=0; j<224; j++)
+		{
+			if(i>=192 & i<224)
+				pixel_and(surface,i,j,(Uint32)0xff0000ff); // RED
 
+			if(i>=16 & i<72)
+				pixel_and(surface,i,j,(Uint32)0xff00ff00); // UPPER-GREEN
+
+			if(i>=0 & i<16 & j>=24 & j<136)
+				pixel_and(surface,i,j,(Uint32)0xff00ff00); // LOWER-GREEN	
+			
+			black_to_transparent(surface,i,j);
+		}
+		
+	}
+	
     this->tex = SDL_CreateTextureFromSurface(rend, surface);
     SDL_FreeSurface(surface);
 
@@ -101,6 +128,16 @@ void Renderer::render(Memory cpuMem)
     // clears the screen
     SDL_RenderClear(rend);
 
+	SDL_SetTextureBlendMode(this->tex,SDL_BLENDMODE_BLEND);
+
+	// Texture coordinates
+    dest.w = 224*2*this->scale;
+    dest.h = 256*2*this->scale;
+    dest.x = 0*this->scale;
+    dest.y = 0*this->scale;
+
+	SDL_RenderCopy(rend,this->texBG,NULL,&dest);
+
     // Texture coordinates
     dest.w = 256*2*this->scale;
     dest.h = 224*2*this->scale;
@@ -108,6 +145,9 @@ void Renderer::render(Memory cpuMem)
     dest.y = 32*this->scale;
     
     SDL_RenderCopyEx(rend,tex,NULL,&dest,270,NULL,SDL_FLIP_NONE);
+
+
+
     SDL_DestroyTexture(this->tex);
     SDL_RenderPresent(rend);
 }

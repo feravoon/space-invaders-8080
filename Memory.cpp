@@ -37,5 +37,3 @@ void Memory::ReadFileIntoMemoryAt(const char* filename, uint32_t offset)
 	fread(buffer, fsize, 1, f);
 	fclose(f);
 }
-
-

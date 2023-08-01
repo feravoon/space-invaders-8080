@@ -61,7 +61,6 @@ Renderer::Renderer(float scale)
     this->rend = SDL_CreateRenderer(win, -1, render_flags);
 
 	SDL_Surface* surfBG = IMG_Load("bg.png");
-	SDL_SetSurfaceBlendMode(surfBG,SDL_BLENDMODE_BLEND);
 	this->texBG = SDL_CreateTextureFromSurface(this->rend, surfBG);
 	SDL_SetTextureBlendMode(this->texBG,SDL_BLENDMODE_BLEND);
 	SDL_FreeSurface(surfBG);
@@ -93,7 +92,6 @@ void Renderer::render(Memory cpuMem)
 	   imByteArray[i] = ~bitReverse(imByteArray[i]);
 
     SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(this->imByteArray,256,224,1,256/8,SDL_PIXELFORMAT_INDEX1MSB);
-    SDL_SetSurfaceBlendMode(surface,SDL_BLENDMODE_BLEND);
 
 	// Convert surface pixel format to RGBA32
 	surface = SDL_ConvertSurfaceFormat(surface,SDL_PIXELFORMAT_RGBA32,0);
@@ -112,15 +110,13 @@ void Renderer::render(Memory cpuMem)
 			if(i>=0 & i<16 & j>=24 & j<136)
 				pixel_and(surface,i,j,(Uint32)0xff00ff00); // LOWER-GREEN	
 			
-			black_to_transparent(surface,i,j);
+			black_to_transparent(surface,i,j); // Make black pixels transparent
 		}
-		
 	}
 	
     this->tex = SDL_CreateTextureFromSurface(rend, surface);
+	SDL_SetTextureBlendMode(this->tex,SDL_BLENDMODE_BLEND);
     SDL_FreeSurface(surface);
-
-    SDL_Rect dest;
 
     // set the background color
     SDL_SetRenderDrawColor(rend,0,0,0,SDL_ALPHA_OPAQUE);
@@ -128,9 +124,7 @@ void Renderer::render(Memory cpuMem)
     // clears the screen
     SDL_RenderClear(rend);
 
-	SDL_SetTextureBlendMode(this->tex,SDL_BLENDMODE_BLEND);
-
-	// Texture coordinates
+	// Background texture coordinates
     dest.w = 224*2*this->scale;
     dest.h = 256*2*this->scale;
     dest.x = 0*this->scale;
@@ -138,15 +132,13 @@ void Renderer::render(Memory cpuMem)
 
 	SDL_RenderCopy(rend,this->texBG,NULL,&dest);
 
-    // Texture coordinates
+    // Game frame texture coordinates
     dest.w = 256*2*this->scale;
     dest.h = 224*2*this->scale;
     dest.x = -32*this->scale;
     dest.y = 32*this->scale;
     
     SDL_RenderCopyEx(rend,tex,NULL,&dest,270,NULL,SDL_FLIP_NONE);
-
-
 
     SDL_DestroyTexture(this->tex);
     SDL_RenderPresent(rend);

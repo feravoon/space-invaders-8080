@@ -30,4 +30,3 @@ void Shifter::Process(IOcontroller& io)
 	}
 
 }
-
